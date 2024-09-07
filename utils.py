@@ -1,5 +1,5 @@
 import numpy as np
-
+import torch
 # 归一化
 def normalize_dem(dem):
     min_value = np.min(dem)
@@ -14,16 +14,16 @@ def denormalize_dem(normalized_dem, min_value, max_value):
 
 # 坡度和坡向的计算
 def calculate_slope_aspect(dem, cellsize):
-    dzdx = (np.roll(dem, -1, axis=1) - np.roll(dem, 1, axis=1)) / (2 * cellsize)
-    dzdy = (np.roll(dem, -1, axis=0) - np.roll(dem, 1, axis=0)) / (2 * cellsize)
+    # 假设 cellsize_np 是 (16,) 形状的数组  
+
+    dzdx = (torch.roll(dem, -1, axis=1) - torch.roll(dem, 1, axis=1)) / (2 * cellsize)
+    dzdy = (torch.roll(dem, -1, axis=0) - torch.roll(dem, 1, axis=0)) / (2 * cellsize)
     
     # Calculate slope
-    slope = np.arctan(np.sqrt(dzdx**2 + dzdy**2))
+    slope = torch.arctan(torch.sqrt(dzdx**2 + dzdy**2))
 
     # Calculate aspect
-    aspect = np.arctan2(dzdy, dzdx)
-    aspect = np.degrees(aspect)
-    aspect = np.where(aspect < 0, 360 + aspect, aspect)
+    aspect = dzdy / dzdx
     
     return slope, aspect
 

@@ -69,9 +69,11 @@ if __name__ == '__main__':
                 inputs,labels,cellsize = data
 
                 cellsize = cellsize.to(device)
+                inputs = torch.from_numpy(inputs)
                 slope_inputs,aspect_inputs = calculate_slope_aspect(inputs,cellsize)
-                inputs = np.stack((inputs,slope_inputs,aspect_inputs),axis=0)
+                inputs = torch.stack((inputs,slope_inputs,aspect_inputs),axis=0)
                 inputs = inputs.to(device)
+                labels = torch.from_numpy(labels)
                 labels = labels.to(device)
                 preds = model(inputs)
                 loss = combined_loss(labels,preds,cellsize)
