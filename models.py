@@ -17,7 +17,7 @@ class ResidualBlock(nn.module):
 
 class mtf_sr(nn.module):
     def __init__(self,num_filters = 256,num_ResdualBlocks=32,scale=2):
-        super().__init__()
+        super(self,mtf_sr).__init__()
         self.conv1 = nn.Conv2d(3,num_filters,kernel_size=3,padding=1)
         self.res_blocks = nn.Sequential(
             *[ResidualBlock for _ in range(num_ResdualBlocks)]

@@ -6,6 +6,7 @@ def normalize_dem(dem):
     max_value = np.max(dem)
     normalized_dem = (dem - min_value) / (max_value - min_value)
     return normalized_dem, min_value, max_value
+
 # 反归一化
 def denormalize_dem(normalized_dem, min_value, max_value):
     original_dem = normalized_dem * (max_value - min_value) + min_value
@@ -25,6 +26,11 @@ def calculate_slope_aspect(dem, cellsize):
     aspect = np.where(aspect < 0, 360 + aspect, aspect)
     
     return slope, aspect
+
+def calc_rmse(ground_truth,preds):
+    err = np.sum((ground_truth.astype(float) - preds.astype(float)) ** 2)
+    err /= preds.shape[0] * preds.shape[1]
+    return err
 
 class AverageMeter(object):
     def __init__(self):

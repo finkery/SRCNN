@@ -1,0 +1,3 @@
+python prepare.py --image-dir "C:\Users\Administrator\Desktop\A" --output-path "C:\Users\Administrator\Desktop\B\output.h5"
+
+python train.py --train-file

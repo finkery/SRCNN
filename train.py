@@ -1,6 +1,7 @@
 import argparse
 import os
 import copy
+import numpy as np
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -11,7 +12,7 @@ from tqdm import tqdm
 from models import mtf_sr
 from loss import combined_loss
 from datasets import TrainDataset,EvalDataset
-from utils import AverageMeter,calculate_slope_aspect
+from utils import AverageMeter,calculate_slope_aspect,calc_rmse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -26,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed',type=int,default=123)
     args = parser.parse_args()
 
-    args.output_dir = os.path.join(args.ouput_dir,'x{}'.format(args.scale))
+    args.output_dir = os.path.join(args.output_dir,'x{}'.format(args.scale))
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -54,22 +55,62 @@ if __name__ == '__main__':
         dataset = eval_dataset,
         batch_size=1
     )
-    for data in train_dataloader:
-        inputs,labels = data
-        print(len(inputs))
-        break
-    # for epoch in range(args.num_epoch):
-    #     model.train()
-    #     epoch_losses = AverageMeter()
 
-    #     with tqdm(total=(len(train_dataset) - len(train_dataset) % args.batch_size)) as t:
-    #         t.set_description('epoch:{}/{}'.format(epoch,args.num_epoch - 1))
-    #         for data in train_dataloader:
-    #             inputs,labels = data
+    best_weight = copy.deepcopy(model.state_dict())
+    best_epoch = 0
+    best_rmse = 0
 
-    #             inputs = inputs.to(device)
-    #             aspect_inputs = calculate_slope_aspect()
-    #             labels = labels.to(device)
+    for epoch in range(args.num_epoch):
+        model.train()
+        epoch_losses = AverageMeter()
 
-    #             preds = model(inputs)
+        with tqdm(total=(len(train_dataset) - len(train_dataset) % args.batch_size)) as t:
+            t.set_description('epoch:{}/{}'.format(epoch,args.num_epoch - 1))
+            for data in train_dataloader:
+                inputs,labels,cellsize = data
+
+                cellsize = cellsize.to(device)
+                slope_inputs,aspect_inputs = calculate_slope_aspect(inputs,cellsize)
+                inputs = np.stack((inputs,slope_inputs,aspect_inputs),axis=0)
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+                preds = model(inputs)
+                loss = criterion(labels,preds,cellsize)
+                epoch_losses.update(loss.item(),len(inputs))
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                t.set_postfix(loss=f'{epoch_losses.avg:.6f}')
+                t.update(len(inputs))
+        
+        torch.save(model.state_dict(),os.path.join(args.output_dir,"epoch_{}.pth".format(epoch)))
+
+        model.eval
+        epoch_rmse = AverageMeter()
+
+        for data in eval_dataloader:
+
+            inputs,labels,cellsize = data
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            cellsize = cellsize.to(device)
+
+            slope_inputs,aspect_inputs = calculate_slope_aspect(inputs,cellsize)
+            inputs = np.stack((inputs,slope_inputs,aspect_inputs),axis=0)
+
+            with torch.no_grad():
+                preds = model(inputs).clamp(0.0,1.0)
+            
+            epoch_rmse.update(calc_rmse(preds,labels),len(inputs))
+
+            print('eval rmse {:.2f}'.format(epoch_rmse.avg))
+
+            if epoch_rmse.avg > best_rmse:
+                best_epoch = epoch
+                best_rmse = epoch_rmse.avg
+                best_weight = copy.deepcopy(model.state_dict())
+
+    print("best_epoch:{} best_rmse:{:.2f}".format(best_epoch,best_rmse))
+    torch.save(best_epoch,os.path.join(args.output_dir,'best.pth'))
 

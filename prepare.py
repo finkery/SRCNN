@@ -10,6 +10,7 @@ def train(args):
 
     lr_patchs = []
     hr_patchs = []
+    cellsizes = []
 
     for image_path in sorted(glob.glob('{}/*'.format(args.image_dir))):
         with rasterio.open(image_path) as src:
@@ -23,14 +24,17 @@ def train(args):
         lr = np.array(lr).astype(np.float32)
         for i in range(0,hr.shape[0] - args.patch_size + 1,args.stride):
             for j in range(0,hr.shape[1] - args.patch_size + 1,args.stride):
-                lr_patchs.append((lr[i // args.scale:i // args.scale + args.patch_size // args.scale,j // args.scale:j // args.scale + args.patch_size // args.scale],cellsize))
-                hr_patchs.append((hr[i:i + args.patch_size,j:j + args.patch_size],cellsize))
+                lr_patchs.append(lr[i // args.scale:i // args.scale + args.patch_size // args.scale,j // args.scale:j // args.scale + args.patch_size // args.scale])
+                hr_patchs.append(hr[i:i + args.patch_size,j:j + args.patch_size])
+                cellsizes.append(cellsize)
     
     lr_patchs = np.array(lr_patchs)
     hr_patchs = np.array(hr_patchs)
+    cellsizes = np.array(cellsizes)
 
     h5_file.create_dataset('lr',data = lr_patchs)
     h5_file.create_dataset('hr',data = hr_patchs)
+    h5_file.create_dataset('cs',data=cellsizes)
 
     h5_file.close()
 
@@ -39,20 +43,21 @@ def eval(args):
 
     lr_group = h5_file.create_group('lr')
     hr_group = h5_file.create_group('hr')
-
+    cs_group = h5_file.create_group('cs')
     for i,image_path in enumerate(sorted(glob.glob('{}/*'.format(args.image_dir)))):
         with rasterio.open(image_path) as src:
-            cellsize = src.res[0]  # 取像元大小
+            cellsize = src.res[0]
         hr = pil_image.open(image_path)
         hr_width = (hr.width // args.scale) * args.scale
         hr_height = (hr.height // args.scale) * args.scale
         hr = hr.resize((hr_width,hr_height),resample=pil_image.BICUBIC)
         lr = hr.resize((hr_width // args.scale,hr_height // args.scale),resample=pil_image.BICUBIC)
-        hr = (np.array(hr).astype(np.float32),cellsize)
-        lr = (np.array(lr).astype(np.float32),cellsize)
+        hr = np.array(hr).astype(np.float32)
+        lr = np.array(lr).astype(np.float32)
 
         hr_group.create_dataset(str(i),data=hr)
         lr_group.create_dataset(str(i),data=lr)
+        cs_group.create_dataset(str(i),cellsize)
     
     h5_file.close()
 
