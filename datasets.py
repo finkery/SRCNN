@@ -11,7 +11,7 @@ class TrainDataset(Dataset):
             return np.expand_dims(f['lr'][idx] / 255.,0), np.expand_dims(f['hr'][idx] / 255.,0),f['cs'][idx] # 归一化处理还需要修改
     def __len__(self):
         with h5py.File(self.h5_file,'r') as f:
-            return len[f['lr']]
+            return len(f['lr'])
 
 class EvalDataset(Dataset):
     def __init__(self,h5_file):
@@ -22,4 +22,4 @@ class EvalDataset(Dataset):
             return np.expand_dims(f['lr'][idx] / 255.,0), np.expand_dims(f['hr'][idx] / 255.,0),f['cs'][idx] # 归一化处理还需要修改
     def __len__(self):
         with h5py.File(self.h5_file,'r') as f:
-            return len[f['lr']]
+            return len(f['lr'])

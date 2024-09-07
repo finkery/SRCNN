@@ -38,9 +38,8 @@ if __name__ == '__main__':
     torch.manual_seed(args.seed)
 
     model = mtf_sr().to(device)
-    criterion = combined_loss()
-
-    optimizer = optim.Adam(lr = args.lr)
+    params = model.parameters() 
+    optimizer = optim.Adam(params, lr = args.lr)
     train_dataset = TrainDataset(args.train_file)
     train_dataloader = DataLoader(
         dataset=train_dataset,
@@ -75,7 +74,7 @@ if __name__ == '__main__':
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 preds = model(inputs)
-                loss = criterion(labels,preds,cellsize)
+                loss = combined_loss(labels,preds,cellsize)
                 epoch_losses.update(loss.item(),len(inputs))
 
                 optimizer.zero_grad()
@@ -86,7 +85,7 @@ if __name__ == '__main__':
         
         torch.save(model.state_dict(),os.path.join(args.output_dir,"epoch_{}.pth".format(epoch)))
 
-        model.eval
+        model.eval()
         epoch_rmse = AverageMeter()
 
         for data in eval_dataloader:
