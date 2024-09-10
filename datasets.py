@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 
 class TrainDataset(Dataset):
@@ -8,7 +9,7 @@ class TrainDataset(Dataset):
         self.h5_file = h5_file
     def __getitem__(self,idx):
         with h5py.File(self.h5_file,'r') as f:
-            return np.expand_dims(f['lr'][idx] / 255.,0), np.expand_dims(f['hr'][idx] / 255.,0),f['cs'][idx] # 归一化处理还需要修改
+            return f['lr'][idx], f['hr'][idx] # 归一化处理还需要修改
     def __len__(self):
         with h5py.File(self.h5_file,'r') as f:
             return len(f['lr'])
@@ -19,7 +20,7 @@ class EvalDataset(Dataset):
         self.h5_file = h5_file
     def __getitem__(self,idx):
         with h5py.File(self.h5_file,'r') as f:
-            return np.expand_dims(f['lr'][idx] / 255.,0), np.expand_dims(f['hr'][idx] / 255.,0),f['cs'][idx] # 归一化处理还需要修改
+            return f['lr'][str(idx)][ : , : ], f['hr'][str(idx)][ : , : ] # 归一化处理还需要修改
     def __len__(self):
         with h5py.File(self.h5_file,'r') as f:
             return len(f['lr'])

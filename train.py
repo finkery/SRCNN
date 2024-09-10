@@ -66,17 +66,17 @@ if __name__ == '__main__':
         with tqdm(total=(len(train_dataset) - len(train_dataset) % args.batch_size)) as t:
             t.set_description('epoch:{}/{}'.format(epoch,args.num_epoch - 1))
             for data in train_dataloader:
-                inputs,labels,cellsize = data
+                inputs,label = data
 
-                cellsize = cellsize.to(device)
-                inputs = torch.from_numpy(inputs)
-                slope_inputs,aspect_inputs = calculate_slope_aspect(inputs,cellsize)
-                inputs = torch.stack((inputs,slope_inputs,aspect_inputs),axis=0)
                 inputs = inputs.to(device)
-                labels = torch.from_numpy(labels)
+                slope_inputs,aspect_inputs = calculate_slope_aspect(inputs)
+                inputs = torch.stack((inputs,slope_inputs,aspect_inputs),axis=1)
+                #print(inputs)
                 labels = labels.to(device)
                 preds = model(inputs)
-                loss = combined_loss(labels,preds,cellsize)
+                preds = preds.squeeze(1)
+                loss = combined_loss(labels,preds)
+                print(loss)
                 epoch_losses.update(loss.item(),len(inputs))
 
                 optimizer.zero_grad()
@@ -92,20 +92,17 @@ if __name__ == '__main__':
 
         for data in eval_dataloader:
 
-            inputs,labels,cellsize = data
+            inputs,labels = data
             inputs = inputs.to(device)
             labels = labels.to(device)
-            cellsize = cellsize.to(device)
+            slope_inputs,aspect_inputs = calculate_slope_aspect(inputs)
+            inputs = torch.stack((inputs,slope_inputs,aspect_inputs),axis=1)
 
-            slope_inputs,aspect_inputs = calculate_slope_aspect(inputs,cellsize)
-            inputs = np.stack((inputs,slope_inputs,aspect_inputs),axis=0)
-
-            with torch.no_grad():
-                preds = model(inputs).clamp(0.0,1.0)
+            preds = model(inputs)
             
             epoch_rmse.update(calc_rmse(preds,labels),len(inputs))
 
-            print('eval rmse {:.2f}'.format(epoch_rmse.avg))
+            print('eval_rmse {:.2f}'.format(epoch_rmse.avg))
 
             if epoch_rmse.avg > best_rmse:
                 best_epoch = epoch

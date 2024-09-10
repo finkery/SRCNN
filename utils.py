@@ -14,7 +14,6 @@ def denormalize_dem(normalized_dem, min_value, max_value):
 
 # 坡度和坡向的计算
 def calculate_slope_aspect(dem, cellsize):
-    # 假设 cellsize_np 是 (16,) 形状的数组  
 
     dzdx = (torch.roll(dem, -1, axis=1) - torch.roll(dem, 1, axis=1)) / (2 * cellsize)
     dzdy = (torch.roll(dem, -1, axis=0) - torch.roll(dem, 1, axis=0)) / (2 * cellsize)
