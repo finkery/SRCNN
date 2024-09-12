@@ -1,35 +1,24 @@
-import numpy as np
 import torch
-# 归一化
-def normalize_dem(dem):
-    min_value = np.min(dem)
-    max_value = np.max(dem)
-    normalized_dem = (dem - min_value) / (max_value - min_value)
-    return normalized_dem, min_value, max_value
-
-# 反归一化
-def denormalize_dem(normalized_dem, min_value, max_value):
-    original_dem = normalized_dem * (max_value - min_value) + min_value
-    return original_dem
-
 # 坡度和坡向的计算
-def calculate_slope_aspect(dem, cellsize):
+def calculate_slope_aspect(dem, cellsize = 30,eval = False):
 
-    dzdx = (torch.roll(dem, -1, axis=1) - torch.roll(dem, 1, axis=1)) / (2 * cellsize)
-    dzdy = (torch.roll(dem, -1, axis=0) - torch.roll(dem, 1, axis=0)) / (2 * cellsize)
-    
+    dzdy = (torch.roll(dem, -1, dims=1) - torch.roll(dem, 1, dims=1))
+    dzdx = (torch.roll(dem, -1, dims=0) - torch.roll(dem, 1, dims=0))
     # Calculate slope
-    slope = torch.arctan(torch.sqrt(dzdx**2 + dzdy**2))
+    slope = torch.tan(torch.sqrt((dzdx / (2 * cellsize))**2 + (dzdy / (2 * cellsize))**2))
 
     # Calculate aspect
     aspect = dzdy / dzdx
-    
+    slope = torch.where(torch.isnan(slope) | torch.isinf(slope), torch.zeros_like(slope), slope)  
+    aspect = torch.where(torch.isnan(aspect) | torch.isinf(aspect), torch.zeros_like(aspect), aspect)  
     return slope, aspect
 
 def calc_rmse(ground_truth,preds):
-    err = np.sum((ground_truth.astype(float) - preds.astype(float)) ** 2)
-    err /= preds.shape[0] * preds.shape[1]
-    return err
+    preds = torch.where(torch.isnan(preds) | torch.isinf(preds), torch.zeros_like(preds), preds)  
+    ground_truth = torch.where(torch.isnan(ground_truth) | torch.isinf(ground_truth), torch.zeros_like(ground_truth), ground_truth)  
+    err = torch.sum((ground_truth - preds) ** 2)
+    err /= (preds.shape[0] + 1) * (preds.shape[1] + 1)
+    return torch.sqrt(err)
 
 class AverageMeter(object):
     def __init__(self):

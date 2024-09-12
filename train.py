@@ -67,16 +67,15 @@ if __name__ == '__main__':
             t.set_description('epoch:{}/{}'.format(epoch,args.num_epoch - 1))
             for data in train_dataloader:
                 inputs,label = data
-
                 inputs = inputs.to(device)
+                label = label.to(device)
                 slope_inputs,aspect_inputs = calculate_slope_aspect(inputs)
                 inputs = torch.stack((inputs,slope_inputs,aspect_inputs),axis=1)
-                #print(inputs)
-                labels = labels.to(device)
+                inputs = torch.where(torch.isnan(inputs) | torch.isinf(inputs), torch.zeros_like(inputs), inputs)
+                label = torch.where(torch.isnan(label) | torch.isinf(label), torch.zeros_like(label), label)
                 preds = model(inputs)
                 preds = preds.squeeze(1)
-                loss = combined_loss(labels,preds)
-                print(loss)
+                loss = combined_loss(label,preds)
                 epoch_losses.update(loss.item(),len(inputs))
 
                 optimizer.zero_grad()
@@ -95,11 +94,12 @@ if __name__ == '__main__':
             inputs,labels = data
             inputs = inputs.to(device)
             labels = labels.to(device)
-            slope_inputs,aspect_inputs = calculate_slope_aspect(inputs)
-            inputs = torch.stack((inputs,slope_inputs,aspect_inputs),axis=1)
-
+            slope_inputs,aspect_inputs = calculate_slope_aspect(inputs,eval=True)
+            # print(inputs)
+            inputs = torch.stack((inputs,slope_inputs,aspect_inputs),axis=1,)
+            inputs = torch.where(torch.isnan(inputs) | torch.isinf(inputs), torch.zeros_like(inputs), inputs)
+            labels = torch.where(torch.isnan(labels) | torch.isinf(labels), torch.zeros_like(labels), labels)
             preds = model(inputs)
-            
             epoch_rmse.update(calc_rmse(preds,labels),len(inputs))
 
             print('eval_rmse {:.2f}'.format(epoch_rmse.avg))

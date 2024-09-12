@@ -1,5 +1,5 @@
 from torch import nn
-
+import torch
 
 class ResidualBlock(nn.Module):
     def __init__(self,num_filters = 256):
@@ -29,8 +29,10 @@ class mtf_sr(nn.Module):
     
     def forward(self,x):
         x = self.conv1(x)
+        x1 = x
         x = self.res_blocks(x)
         x = self.conv2(x)
+        x = x + x1
         x = self.subpixel_conv(x)
         x = self.pixel_shuffle(x)
         x = self.conv3(x)
